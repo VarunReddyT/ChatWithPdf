@@ -6,3 +6,5 @@ langchain-core==0.2.16
 langchain-google-genai==1.0.7
 python-dotenv==1.0.1
 pypdf==4.2.0
+pdfplumber==0.11.2
+fitz==0.0.1.dev2
