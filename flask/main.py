@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 import os
 import tempfile
+import shutil
+import traceback
 
 load_dotenv()
 
@@ -20,9 +22,6 @@ if not google_api_key:
 @app.route('/ask', methods=['POST'])
 def ask():
     try:
-        print(request.files)
-        print(request.form)  
-        
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
 
@@ -64,10 +63,12 @@ def ask():
             return jsonify({'response': response_content})
         finally:
             os.remove(file_path)
-            os.rmdir(temp_dir)
+            shutil.rmtree(temp_dir)
     except Exception as e:
         print(f"An error occurred: {e}")
-        return jsonify({'error': e}), 500
+        traceback.print_exc()  # Add traceback for more detailed error information
+        return jsonify({'error': 'Internal Server Error'}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
