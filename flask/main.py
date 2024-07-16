@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 import os
 import io
-import fitz 
+from PyPDF2 import PdfReader
 
 class Document:
     def __init__(self, page_content, metadata=None):
@@ -37,17 +37,17 @@ def ask():
         file_stream = io.BytesIO(file_content)
 
         try:
-            # Process the PDF using PyMuPDF (fitz)
-            pdf_document = fitz.open(stream=file_stream, filetype='pdf')
-            pages = [page.get_text() for page in pdf_document]
+        
+            reader = PdfReader(file_stream)
+            pages = [page.extract_text() for page in reader.pages]
 
-            # Create documents from the extracted text
+    
             documents = [Document(page_content=text) for text in pages if text]
 
             embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
             db = FAISS.from_documents(documents, embeddings)
 
-            query = "Give summary of the pdf's content"
+            query = "Generate 15 questions from this"
 
             docs = db.similarity_search(query)
             content = "\n".join([doc.page_content for doc in docs])
@@ -58,7 +58,7 @@ def ask():
                 "just say that you don't know. Do not make up information. Here is the context:\n"
             )
 
-            input_text = f"{qa_prompt}\n{content}\n\nUser question:\n{query}"
+            input_text = f"{qa_prompt}\n{pages}\n\nUser question:\n{query}"
 
             llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", api_key=google_api_key)
             result = llm.invoke(input_text)
@@ -66,6 +66,7 @@ def ask():
             response_content = result.content.replace("*", "")
 
             return jsonify({'response': response_content})
+            return pages
         except Exception as e:
             print(f"An error occurred while processing the file: {e}")
             return jsonify({'error': 'Failed to process the PDF file'}), 500
@@ -75,5 +76,3 @@ def ask():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-    
